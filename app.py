@@ -1,5 +1,7 @@
 import io
+import math
 import os
+
 import pandas as pd
 from flask import Flask, request, jsonify, render_template
 
@@ -15,20 +17,24 @@ def allowed_file(filename):
 
 def compute_correlations(df):
     numeric_df = df.select_dtypes(include=['number'])
-    pearson = numeric_df.corr(method='pearson')
-    spearman = numeric_df.corr(method='spearman')
     columns = numeric_df.columns.tolist()
+
+    def sanitize(matrix):
+        return [
+            [None if math.isnan(v) else v for v in row]
+            for row in matrix.values.tolist()
+        ]
 
     def matrix_to_dict(df_matrix):
         return {
             'columns': columns,
-            'data': df_matrix.values.tolist()
+            'data': sanitize(df_matrix)
         }
 
     return {
         'columns': columns,
-        'pearson': matrix_to_dict(pearson),
-        'spearman': matrix_to_dict(spearman)
+        'pearson': matrix_to_dict(numeric_df.corr(method='pearson', min_periods=1)),
+        'spearman': matrix_to_dict(numeric_df.corr(method='spearman', min_periods=1))
     }
 
 

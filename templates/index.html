@@ -246,7 +246,11 @@
             data.forEach((row, i) => {
                 html += `<tr><td class="row-header">${columns[i]}</td>`;
                 row.forEach(v => {
-                    html += `<td class="${colorClass(v)}">${v.toFixed(4)}</td>`;
+                    if (v === null) {
+                        html += '<td class="neutral">N/A</td>';
+                    } else {
+                        html += `<td class="${colorClass(v)}">${v.toFixed(4)}</td>`;
+                    }
                 });
                 html += '</tr>';
             });
