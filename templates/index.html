@@ -13,19 +13,9 @@
             padding: 40px 20px;
             min-height: 100vh;
         }
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-        h1 {
-            font-size: 28px;
-            margin-bottom: 8px;
-            color: #111827;
-        }
-        .subtitle {
-            color: #6b7280;
-            margin-bottom: 32px;
-        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        h1 { font-size: 28px; margin-bottom: 8px; color: #111827; }
+        .subtitle { color: #6b7280; margin-bottom: 32px; }
         .upload-card {
             background: #fff;
             border-radius: 12px;
@@ -46,13 +36,8 @@
             border-color: #3b82f6;
             background: #eff6ff;
         }
-        .drop-zone p {
-            color: #6b7280;
-            margin-top: 8px;
-        }
-        .drop-zone strong {
-            color: #3b82f6;
-        }
+        .drop-zone p { color: #6b7280; margin-top: 8px; }
+        .drop-zone strong { color: #3b82f6; }
         .file-info {
             margin-top: 16px;
             padding: 12px;
@@ -84,16 +69,8 @@
             display: none;
         }
         .results { display: none; }
-        .results h2 {
-            font-size: 20px;
-            margin-bottom: 16px;
-            color: #111827;
-        }
-        .summary {
-            display: flex;
-            gap: 16px;
-            margin-bottom: 24px;
-        }
+        .results h2 { font-size: 20px; margin-bottom: 16px; color: #111827; }
+        .summary { display: flex; gap: 16px; margin-bottom: 24px; }
         .summary-item {
             flex: 1;
             background: #fff;
@@ -110,30 +87,67 @@
             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
             margin-bottom: 24px;
         }
-        .matrix-section h3 {
-            font-size: 17px;
+        .matrix-section h3 { font-size: 17px; margin-bottom: 16px; color: #111827; }
+        .view-toggle {
+            display: inline-flex;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            overflow: hidden;
             margin-bottom: 16px;
-            color: #111827;
         }
-        .matrix-wrapper {
-            overflow-x: auto;
-        }
-        table {
-            border-collapse: collapse;
-            width: 100%;
+        .view-toggle button {
+            margin: 0;
+            padding: 6px 16px;
             font-size: 13px;
-        }
-        th, td {
-            padding: 8px 12px;
-            text-align: right;
-            border: 1px solid #e5e7eb;
-        }
-        th {
-            background: #f9fafb;
-            font-weight: 600;
+            border-radius: 0;
+            background: #fff;
             color: #374151;
-            white-space: nowrap;
+            border: none;
+            border-right: 1px solid #d1d5db;
         }
+        .view-toggle button:last-child { border-right: none; }
+        .view-toggle button.active {
+            background: #3b82f6;
+            color: #fff;
+        }
+        .view-toggle button:hover:not(.active) { background: #f3f4f6; }
+        .matrix-wrapper { overflow-x: auto; }
+        .heatmap-container { position: relative; display: inline-block; }
+        .heatmap-canvas { display: block; }
+        .heatmap-tooltip {
+            position: absolute;
+            pointer-events: none;
+            background: rgba(0,0,0,0.8);
+            color: #fff;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            white-space: nowrap;
+            display: none;
+            z-index: 10;
+        }
+        .heatmap-legend {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 12px;
+            font-size: 12px;
+            color: #6b7280;
+        }
+        .heatmap-legend .bar {
+            width: 180px;
+            height: 14px;
+            border-radius: 3px;
+        }
+        .heatmap-legend .labels {
+            display: flex;
+            justify-content: space-between;
+            width: 180px;
+            font-size: 11px;
+        }
+        table { border-collapse: collapse; width: 100%; font-size: 13px; }
+        th, td { padding: 8px 12px; text-align: right; border: 1px solid #e5e7eb; }
+        th { background: #f9fafb; font-weight: 600; color: #374151; white-space: nowrap; }
         th.row-header, td.row-header {
             text-align: left;
             font-weight: 600;
@@ -181,11 +195,21 @@
             </div>
             <div class="matrix-section">
                 <h3>Pearson 相关系数矩阵</h3>
-                <div class="matrix-wrapper" id="pearsonMatrix"></div>
+                <div class="view-toggle">
+                    <button class="active" onclick="switchView('pearson','table')">表格</button>
+                    <button onclick="switchView('pearson','heatmap')">热力图</button>
+                </div>
+                <div class="matrix-wrapper" id="pearsonTable"></div>
+                <div class="matrix-wrapper" id="pearsonHeatmap" style="display:none;"></div>
             </div>
             <div class="matrix-section">
                 <h3>Spearman 相关系数矩阵</h3>
-                <div class="matrix-wrapper" id="spearmanMatrix"></div>
+                <div class="view-toggle">
+                    <button class="active" onclick="switchView('spearman','table')">表格</button>
+                    <button onclick="switchView('spearman','heatmap')">热力图</button>
+                </div>
+                <div class="matrix-wrapper" id="spearmanTable"></div>
+                <div class="matrix-wrapper" id="spearmanHeatmap" style="display:none;"></div>
             </div>
         </div>
     </div>
@@ -198,9 +222,9 @@
         const errorMsg = document.getElementById('errorMsg');
         const results = document.getElementById('results');
         let selectedFile = null;
+        let apiData = null;
 
         dropZone.addEventListener('click', () => fileInput.click());
-
         dropZone.addEventListener('dragover', (e) => {
             e.preventDefault();
             dropZone.classList.add('dragover');
@@ -239,7 +263,7 @@
             return 'neutral';
         }
 
-        function renderMatrix(container, columns, data) {
+        function renderTable(container, columns, data) {
             let html = '<table><thead><tr><th class="row-header"></th>';
             columns.forEach(c => html += `<th>${c}</th>`);
             html += '</tr></thead><tbody>';
@@ -258,6 +282,160 @@
             container.innerHTML = html;
         }
 
+        function renderHeatmap(container, columns, data, heatmap, legend) {
+            const n = columns.length;
+            const labelWidth = 80;
+            const labelHeight = 80;
+            const cellSize = Math.min(60, Math.max(28, Math.floor(560 / n)));
+            const canvasWidth = labelWidth + n * cellSize;
+            const canvasHeight = labelHeight + n * cellSize;
+
+            const wrap = document.createElement('div');
+            wrap.className = 'heatmap-container';
+
+            const canvas = document.createElement('canvas');
+            canvas.className = 'heatmap-canvas';
+            canvas.width = canvasWidth * 2;
+            canvas.height = canvasHeight * 2;
+            canvas.style.width = canvasWidth + 'px';
+            canvas.style.height = canvasHeight + 'px';
+            wrap.appendChild(canvas);
+
+            const tooltip = document.createElement('div');
+            tooltip.className = 'heatmap-tooltip';
+            wrap.appendChild(tooltip);
+
+            const ctx = canvas.getContext('2d');
+            ctx.scale(2, 2);
+            ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+
+            ctx.font = '12px -apple-system, BlinkMacSystemFont, sans-serif';
+            ctx.textAlign = 'right';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = '#374151';
+            for (let i = 0; i < n; i++) {
+                const y = labelHeight + i * cellSize + cellSize / 2;
+                ctx.fillText(columns[i], labelWidth - 6, y);
+            }
+
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'bottom';
+            for (let j = 0; j < n; j++) {
+                const x = labelWidth + j * cellSize + cellSize / 2;
+                ctx.save();
+                ctx.translate(x, labelHeight - 6);
+                ctx.rotate(-Math.PI / 4);
+                ctx.fillText(columns[j], 0, 0);
+                ctx.restore();
+            }
+
+            for (let i = 0; i < n; i++) {
+                for (let j = 0; j < n; j++) {
+                    const x = labelWidth + j * cellSize;
+                    const y = labelHeight + i * cellSize;
+                    ctx.fillStyle = heatmap.colors[i][j];
+                    ctx.fillRect(x, y, cellSize, cellSize);
+                    ctx.strokeStyle = '#fff';
+                    ctx.lineWidth = 1;
+                    ctx.strokeRect(x, y, cellSize, cellSize);
+
+                    const v = data[i][j];
+                    ctx.font = '11px -apple-system, BlinkMacSystemFont, sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    if (v === null) {
+                        ctx.fillStyle = '#9ca3af';
+                        ctx.fillText('N/A', x + cellSize / 2, y + cellSize / 2);
+                    } else {
+                        ctx.fillStyle = (v > 0.3 || v < -0.7) ? '#fff' : '#1f2937';
+                        ctx.fillText(v.toFixed(2), x + cellSize / 2, y + cellSize / 2);
+                    }
+                }
+            }
+
+            canvas.addEventListener('mousemove', (e) => {
+                const rect = canvas.getBoundingClientRect();
+                const mx = e.clientX - rect.left;
+                const my = e.clientY - rect.top;
+                const col = Math.floor((mx - labelWidth) / cellSize);
+                const row = Math.floor((my - labelHeight) / cellSize);
+                if (row >= 0 && row < n && col >= 0 && col < n) {
+                    const v = data[row][col];
+                    tooltip.textContent = `${columns[row]} × ${columns[col]}: ${v === null ? 'N/A' : v.toFixed(4)}`;
+                    tooltip.style.display = 'block';
+                    tooltip.style.left = (mx + 12) + 'px';
+                    tooltip.style.top = (my - 8) + 'px';
+                } else {
+                    tooltip.style.display = 'none';
+                }
+            });
+            canvas.addEventListener('mouseleave', () => { tooltip.style.display = 'none'; });
+
+            const legendDiv = document.createElement('div');
+            legendDiv.className = 'heatmap-legend';
+            const barCanvas = document.createElement('canvas');
+            barCanvas.className = 'bar';
+            barCanvas.width = 360;
+            barCanvas.height = 28;
+            const barCtx = barCanvas.getContext('2d');
+            const stops = legend.stops;
+            const grad = barCtx.createLinearGradient(0, 0, 360, 0);
+            stops.forEach(s => {
+                const offset = (s.value - legend.min) / (legend.max - legend.min);
+                grad.addColorStop(offset, s.color);
+            });
+            barCtx.fillStyle = grad;
+            barCtx.fillRect(0, 0, 360, 28);
+            legendDiv.appendChild(barCanvas);
+            const labelsDiv = document.createElement('div');
+            labelsDiv.className = 'labels';
+            labelsDiv.style.width = '180px';
+            const minLabel = document.createElement('span');
+            minLabel.textContent = legend.min.toFixed(0);
+            const midLabel = document.createElement('span');
+            midLabel.textContent = '0';
+            const maxLabel = document.createElement('span');
+            maxLabel.textContent = legend.max.toFixed(0);
+            labelsDiv.appendChild(minLabel);
+            labelsDiv.appendChild(midLabel);
+            labelsDiv.appendChild(maxLabel);
+            const legendWrap = document.createElement('div');
+            legendWrap.style.display = 'flex';
+            legendWrap.style.flexDirection = 'column';
+            legendWrap.style.gap = '2px';
+            legendWrap.appendChild(barCanvas);
+            legendWrap.appendChild(labelsDiv);
+            legendDiv.appendChild(legendWrap);
+
+            container.innerHTML = '';
+            container.appendChild(wrap);
+            container.appendChild(legendDiv);
+        }
+
+        function switchView(type, view) {
+            const section = type === 'pearson'
+                ? document.querySelector('.matrix-section:nth-of-type(1)')
+                : document.querySelector('.matrix-section:nth-of-type(2)');
+            const idx = type === 'pearson' ? 0 : 1;
+            const allSections = document.querySelectorAll('.matrix-section');
+            const sectionEl = allSections[idx];
+
+            const tableEl = document.getElementById(type + 'Table');
+            const heatmapEl = document.getElementById(type + 'Heatmap');
+            const btns = sectionEl.querySelectorAll('.view-toggle button');
+
+            btns.forEach(b => b.classList.remove('active'));
+            if (view === 'table') {
+                btns[0].classList.add('active');
+                tableEl.style.display = '';
+                heatmapEl.style.display = 'none';
+            } else {
+                btns[1].classList.add('active');
+                tableEl.style.display = 'none';
+                heatmapEl.style.display = '';
+            }
+        }
+
         submitBtn.addEventListener('click', async () => {
             if (!selectedFile) return;
             submitBtn.disabled = true;
@@ -271,11 +449,23 @@
                 const res = await fetch('/api/correlation', { method: 'POST', body: formData });
                 const data = await res.json();
                 if (!res.ok) throw new Error(data.error || '计算失败');
+                apiData = data;
 
                 document.getElementById('rowCount').textContent = data.rows;
                 document.getElementById('colCount').textContent = data.numeric_columns.length;
-                renderMatrix(document.getElementById('pearsonMatrix'), data.pearson.columns, data.pearson.data);
-                renderMatrix(document.getElementById('spearmanMatrix'), data.spearman.columns, data.spearman.data);
+
+                ['pearson', 'spearman'].forEach(type => {
+                    const m = data[type];
+                    renderTable(document.getElementById(type + 'Table'), m.columns, m.data);
+                    renderHeatmap(
+                        document.getElementById(type + 'Heatmap'),
+                        m.columns,
+                        m.data,
+                        m.heatmap,
+                        m.heatmap.legend
+                    );
+                });
+
                 results.style.display = 'block';
                 results.scrollIntoView({ behavior: 'smooth' });
             } catch (e) {

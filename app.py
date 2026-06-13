@@ -5,6 +5,55 @@ import os
 import pandas as pd
 from flask import Flask, request, jsonify, render_template
 
+HEATMAP_STOPS = [
+    (-1.0, (49, 54, 149)),
+    (-0.5, (69, 117, 180)),
+    (0.0, (247, 247, 247)),
+    (0.5, (215, 48, 39)),
+    (1.0, (165, 0, 38)),
+]
+
+
+def value_to_color(val):
+    if val is None:
+        return (220, 220, 220)
+    v = max(-1.0, min(1.0, val))
+    for i in range(len(HEATMAP_STOPS) - 1):
+        v0, c0 = HEATMAP_STOPS[i]
+        v1, c1 = HEATMAP_STOPS[i + 1]
+        if v0 <= v <= v1:
+            t = (v - v0) / (v1 - v0)
+            r = int(c0[0] + t * (c1[0] - c0[0]))
+            g = int(c0[1] + t * (c1[1] - c0[1]))
+            b = int(c0[2] + t * (c1[2] - c0[2]))
+            return (r, g, b)
+    return HEATMAP_STOPS[-1][1]
+
+
+def build_heatmap(sanitized_data):
+    colors = []
+    for row in sanitized_data:
+        color_row = []
+        for v in row:
+            r, g, b = value_to_color(v)
+            color_row.append(f'rgb({r},{g},{b})')
+        colors.append(color_row)
+    legend_stops = []
+    for val, (r, g, b) in HEATMAP_STOPS:
+        legend_stops.append({
+            'value': val,
+            'color': f'rgb({r},{g},{b})'
+        })
+    return {
+        'colors': colors,
+        'legend': {
+            'min': -1.0,
+            'max': 1.0,
+            'stops': legend_stops
+        }
+    }
+
+
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024
 
@@ -26,9 +75,11 @@ def compute_correlations(df):
         ]
 
     def matrix_to_dict(df_matrix):
+        s = sanitize(df_matrix)
         return {
             'columns': columns,
-            'data': sanitize(df_matrix)
+            'data': s,
+            'heatmap': build_heatmap(s)
         }
 
     return {
